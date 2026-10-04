@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Wyze",
+        "description": "Enter the Wyze account credentials and API key used by the scales.",
+        "data": {
+          "wyze_email": "Wyze email",
+          "wyze_password": "Wyze password",
+          "wyze_key_id": "Wyze API key ID",
+          "wyze_api_key": "Wyze API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not authenticate with Wyze. Check the credentials and API key."
+    },
+    "abort": {
+      "already_configured": "This Wyze account is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sync and Garmin accounts",
+        "description": "Choose a sync interval. Discovered profiles: {profiles}. Enter Garmin credentials in the fields for each profile. If Garmin requests MFA, enter the current code; it is not saved.",
+        "data": {
+          "interval_hours": "Sync interval (hours)",
+          "profile_id": "Wyze profile",
+          "garmin_email": "Garmin email",
+          "garmin_password": "Garmin password",
+          "garmin_mfa": "Current Garmin MFA code"
+        }
+      }
+    },
+    "error": {
+      "incomplete_garmin_account": "Enter both a Garmin email and password for each account.",
+      "garmin_auth_failed": "Garmin authentication failed. Check the account and MFA code."
+    }
+  }
+}

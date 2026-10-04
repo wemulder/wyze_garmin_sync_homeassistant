@@ -1,0 +1,13 @@
+{
+  "domain": "wyze_garmin_sync",
+  "name": "Wyze Garmin Sync",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/wimmulder/wyze_garmin_sync_homeassistant",
+  "iot_class": "cloud_polling",
+  "requirements": [
+    "wyze-sdk==2.3.8",
+    "garminconnect==0.3.17"
+  ],
+  "version": "0.1.0"
+}

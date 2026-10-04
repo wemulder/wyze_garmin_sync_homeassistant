@@ -26,6 +26,14 @@ Automatically synchronize body-composition measurements from a **Wyze Scale** to
 
 The application retrieves the latest measurement from your Wyze account and uploads the body-composition data to Garmin Connect.
 
+## Home Assistant / HACS
+
+This fork also includes a Home Assistant custom integration with per-profile
+sensor entities, separate Garmin mappings, configurable hourly sync, and a
+manual sync button. See [Home Assistant / HACS setup](./docs/home-assistant.md).
+The integration syncs latest readings only; historical backfill remains a
+manual standalone-script operation.
+
 The Docker container performs a synchronization when it starts and then checks for new measurements every **10 minutes**.
 
 ---
