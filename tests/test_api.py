@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import unittest
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+from unittest.mock import patch
 
-from custom_components.wyze_garmin_sync.api import latest_measurements
+from custom_components.wyze_garmin_sync.api import (
+    authenticate_wyze,
+    latest_measurements,
+)
 
 
 class FakeRecord:
@@ -113,3 +120,45 @@ class TestLatestMeasurements(unittest.TestCase):
         self.assertEqual(set(profiles), {"profile-a", "profile-b"})
         self.assertIsNone(profiles["profile-a"]["measurement_id"])
         self.assertIsNone(profiles["profile-b"]["measurement_id"])
+
+
+class TestWyzeAuthentication(unittest.TestCase):
+    @patch("custom_components.wyze_garmin_sync.api.Client")
+    def test_saves_token_fields_from_wyze_response(self, client_class) -> None:
+        client = client_class.return_value
+        client.login.return_value = SimpleNamespace(
+            data={
+                "access_token": "access-value",
+                "refresh_token": "refresh-value",
+                "user_id": "user-value",
+                "unneeded_response_field": object(),
+            }
+        )
+
+        with TemporaryDirectory() as temporary_directory:
+            token_file = str(Path(temporary_directory) / "wyze" / "tokens.json")
+            authenticate_wyze(
+                "user@example.test",
+                "password",
+                "key-id",
+                "api-key",
+                token_file,
+            )
+
+            with Path(token_file).open(encoding="utf-8") as token_handle:
+                saved_tokens = json.load(token_handle)
+
+        self.assertEqual(
+            saved_tokens,
+            {
+                "access_token": "access-value",
+                "refresh_token": "refresh-value",
+                "user_id": "user-value",
+            },
+        )
+        client.login.assert_called_once_with(
+            email="user@example.test",
+            password="password",
+            key_id="key-id",
+            api_key="api-key",
+        )

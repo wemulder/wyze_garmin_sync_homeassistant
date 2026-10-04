@@ -55,7 +55,18 @@ def authenticate_wyze(
         key_id=key_id,
         api_key=api_key,
     )
-    save_wyze_tokens(token_file, response)
+    response_data = getattr(response, "data", None)
+    if not isinstance(response_data, dict):
+        raise RuntimeError("Wyze authentication returned an invalid token response")
+
+    tokens = {
+        key: response_data[key]
+        for key in ("access_token", "refresh_token", "user_id")
+        if key in response_data
+    }
+    if not tokens.get("access_token") or not tokens.get("refresh_token"):
+        raise RuntimeError("Wyze authentication response is missing required tokens")
+    save_wyze_tokens(token_file, tokens)
 
 
 def _refresh_wyze_token(
