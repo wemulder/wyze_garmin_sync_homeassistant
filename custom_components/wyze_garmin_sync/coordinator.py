@@ -54,6 +54,7 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self._uploaded: dict[str, str] | None = None
         self._cached_profiles: dict[str, dict[str, Any]] | None = None
+        self._last_refresh_error: str | None = None
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Refresh measurements and upload unseen latest records."""
@@ -79,7 +80,12 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 devices,
             )
         except Exception as err:
+            self._last_refresh_error = (
+                f"{type(err).__name__}: {err}"
+            )
+            _LOGGER.exception("Unable to refresh Wyze scale data")
             raise UpdateFailed("Unable to retrieve the latest Wyze readings") from err
+        self._last_refresh_error = None
 
         for profile_id, cached in self._cached_profiles.items():
             current = profiles.get(profile_id)
@@ -111,12 +117,12 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     measurement["_record"],
                 )
             except Exception as err:
-                _LOGGER.error(
+                _LOGGER.exception(
                     "Garmin synchronization failed for Wyze profile %s",
                     profile_id,
                 )
                 sync_errors[profile_id] = (
-                    "Garmin upload failed; check the integration logs and account setup."
+                    f"{type(err).__name__}: {err}"
                 )
                 continue
             self._uploaded[profile_id] = measurement["measurement_id"]
@@ -148,6 +154,11 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Run a manual synchronization and propagate errors to the caller."""
         await self.async_refresh()
         if self.last_update_success is False:
-            raise UpdateFailed("Manual Wyze/Garmin synchronization failed")
+            detail = self._last_refresh_error or "See the integration log for details."
+            raise UpdateFailed(f"Wyze refresh failed: {detail}")
         if self.data and self.data.get("sync_errors"):
-            raise UpdateFailed("One or more Garmin profile uploads failed")
+            errors = self.data["sync_errors"]
+            details = "; ".join(
+                f"{profile_id}: {error}" for profile_id, error in errors.items()
+            )
+            raise UpdateFailed(f"Garmin sync failed: {details}")

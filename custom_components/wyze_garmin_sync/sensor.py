@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -88,13 +89,20 @@ async def async_setup_entry(
     def add_new_profiles() -> None:
         profiles = coordinator.data.get("profiles", {}) if coordinator.data else {}
         entities = []
-        for profile_id, profile in profiles.items():
+        for profile_id in profiles:
             if profile_id in known:
                 continue
             known.add(profile_id)
             entities.extend(
                 WyzeProfileSensor(coordinator, entry.entry_id, profile_id, metric)
                 for metric in METRICS
+            )
+            entities.append(
+                WyzeProfileWeighInSensor(
+                    coordinator,
+                    entry.entry_id,
+                    profile_id,
+                )
             )
         if entities:
             async_add_entities(entities)
@@ -160,6 +168,65 @@ class WyzeProfileSensor(SensorEntity):
         return (
             self.coordinator.last_update_success
             and self.profile_id in self.coordinator.data.get("profiles", {})
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to coordinator updates."""
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
+
+
+class WyzeProfileWeighInSensor(SensorEntity):
+    """Timestamp of the latest recorded Wyze weigh-in."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Last weigh-in"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(
+        self,
+        coordinator: WyzeGarminCoordinator,
+        entry_id: str,
+        profile_id: str,
+    ) -> None:
+        self.coordinator = coordinator
+        self.profile_id = profile_id
+        self._attr_unique_id = f"{entry_id}_{profile_id}_last_weigh_in"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        profile = self.coordinator.data["profiles"][self.profile_id]
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{self.coordinator.entry.entry_id}_{self.profile_id}")},
+            manufacturer=DEFAULT_MANUFACTURER,
+            name=profile["name"],
+            model="Scale profile",
+        )
+
+    @property
+    def native_value(self) -> datetime | None:
+        profile = self.coordinator.data.get("profiles", {}).get(self.profile_id, {})
+        timestamp = profile.get("timestamp")
+        return datetime.fromisoformat(timestamp) if timestamp else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        profile = self.coordinator.data.get("profiles", {}).get(self.profile_id, {})
+        return {
+            "profile_id": self.profile_id,
+            "measurement_id": profile.get("measurement_id"),
+        }
+
+    @property
+    def available(self) -> bool:
+        return (
+            self.coordinator.last_update_success
+            and bool(
+                self.coordinator.data.get("profiles", {})
+                .get(self.profile_id, {})
+                .get("timestamp")
+            )
         )
 
     async def async_added_to_hass(self) -> None:

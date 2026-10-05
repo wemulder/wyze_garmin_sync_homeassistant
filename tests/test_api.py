@@ -7,13 +7,17 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
+
+from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.wyze_garmin_sync.api import (
     authenticate_wyze,
     latest_measurements,
 )
+from custom_components.wyze_garmin_sync.button import WyzeGarminSyncButton
 from custom_components.wyze_garmin_sync.const import parse_sync_time
+from custom_components.wyze_garmin_sync.sensor import WyzeProfileWeighInSensor
 
 
 class FakeRecord:
@@ -169,3 +173,49 @@ class TestDailySyncTime(unittest.TestCase):
     def test_parses_home_assistant_time_selector_values(self) -> None:
         self.assertEqual(parse_sync_time("07:00:00").isoformat(), "07:00:00")
         self.assertEqual(parse_sync_time("23:45:00").isoformat(), "23:45:00")
+
+
+class TestWeighInTimestampSensor(unittest.TestCase):
+    def test_sensor_state_is_the_measurement_time(self) -> None:
+        coordinator = SimpleNamespace(
+            data={
+                "profiles": {
+                    "profile-a": {
+                        "timestamp": "2026-10-04T18:42:15+00:00",
+                        "measurement_id": "reading-a",
+                        "name": "Alex",
+                    }
+                }
+            },
+            entry=SimpleNamespace(entry_id="entry-a"),
+            last_update_success=True,
+        )
+
+        sensor = WyzeProfileWeighInSensor(
+            coordinator,
+            "entry-a",
+            "profile-a",
+        )
+
+        self.assertEqual(
+            sensor.native_value.isoformat(),
+            "2026-10-04T18:42:15+00:00",
+        )
+
+
+class TestManualSyncButton(unittest.IsolatedAsyncioTestCase):
+    async def test_logs_and_surfaces_sync_failure(self) -> None:
+        coordinator = SimpleNamespace(
+            async_sync_now=AsyncMock(side_effect=RuntimeError("diagnostic detail"))
+        )
+        button = WyzeGarminSyncButton(coordinator, "entry-a")
+
+        with self.assertLogs(
+            "custom_components.wyze_garmin_sync.button",
+            level="ERROR",
+        ) as captured:
+            with self.assertRaises(HomeAssistantError) as raised:
+                await button.async_press()
+
+        self.assertIn("diagnostic detail", str(raised.exception))
+        self.assertIn("Manual Wyze/Garmin synchronization failed", captured.output[0])

@@ -53,10 +53,12 @@ unambiguous.
 
 Each discovered profile has sensors for weight, body fat, body water, bone
 mass, muscle mass, basal metabolic rate, metabolic age, visceral fat rating,
-BMI, and physique rating. The integration also provides a **Sync now** button.
-Pressing it requests an immediate refresh for all profiles; repeated readings
-are not uploaded again. It can also be used while identifying profiles before
-Garmin accounts are assigned.
+BMI, physique rating, and **Last weigh-in**. The last-weigh-in sensor reports
+the timestamp supplied by Wyze for the measurement, rather than the time Home
+Assistant last synchronized. The integration also provides a **Sync now**
+button. Pressing it requests an immediate refresh for all profiles; repeated
+readings are not uploaded again. It can also be used while identifying profiles
+before Garmin accounts are assigned.
 
 Scheduled synchronization runs once daily at the time selected in the
 integration options (default **07:00 Home Assistant local time**). The first

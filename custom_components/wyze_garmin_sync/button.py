@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -10,6 +12,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import WyzeGarminCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -41,4 +45,7 @@ class WyzeGarminSyncButton(ButtonEntity):
         try:
             await self.coordinator.async_sync_now()
         except Exception as err:
-            raise HomeAssistantError("Unable to synchronize Wyze with Garmin") from err
+            _LOGGER.exception("Manual Wyze/Garmin synchronization failed")
+            raise HomeAssistantError(
+                f"Unable to synchronize Wyze with Garmin: {err}"
+            ) from err
