@@ -70,6 +70,59 @@ class WyzeGarminConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_reconfigure(
+        self, user_input: dict | None = None
+    ) -> FlowResult:
+        """Update Wyze credentials and validate them before replacing the entry."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            token_file = api.wyze_token_file(self.hass.config.path(".storage", DOMAIN))
+            try:
+                await self.hass.async_add_executor_job(
+                    api.authenticate_wyze,
+                    user_input[CONF_WYZE_EMAIL],
+                    user_input[CONF_WYZE_PASSWORD],
+                    user_input[CONF_WYZE_KEY_ID],
+                    user_input[CONF_WYZE_API_KEY],
+                    token_file,
+                )
+            except Exception:
+                _LOGGER.exception("Wyze re-authentication failed")
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data=user_input,
+                )
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_WYZE_EMAIL,
+                    default=entry.data[CONF_WYZE_EMAIL],
+                ): str,
+                vol.Required(
+                    CONF_WYZE_PASSWORD,
+                    default=entry.data[CONF_WYZE_PASSWORD],
+                ): str,
+                vol.Required(
+                    CONF_WYZE_KEY_ID,
+                    default=entry.data[CONF_WYZE_KEY_ID],
+                ): str,
+                vol.Required(
+                    CONF_WYZE_API_KEY,
+                    default=entry.data[CONF_WYZE_API_KEY],
+                ): str,
+            }
+        )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=schema,
+            errors=errors,
+        )
+
     @staticmethod
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,

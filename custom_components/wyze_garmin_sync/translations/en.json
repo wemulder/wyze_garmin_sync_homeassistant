@@ -10,6 +10,16 @@
           "wyze_key_id": "Wyze API key ID",
           "wyze_api_key": "Wyze API key"
         }
+      },
+      "reconfigure": {
+        "title": "Update Wyze credentials",
+        "description": "Enter the current Wyze account credentials and API key. Authentication is verified before the integration is updated.",
+        "data": {
+          "wyze_email": "Wyze email",
+          "wyze_password": "Wyze password",
+          "wyze_key_id": "Wyze API key ID",
+          "wyze_api_key": "Wyze API key"
+        }
       }
     },
     "error": {

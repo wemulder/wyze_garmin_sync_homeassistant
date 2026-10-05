@@ -17,6 +17,10 @@ from custom_components.wyze_garmin_sync.api import (
 )
 from custom_components.wyze_garmin_sync.button import WyzeGarminSyncButton
 from custom_components.wyze_garmin_sync.const import parse_sync_time
+from custom_components.wyze_garmin_sync.coordinator import (
+    _async_clear_sync_failure,
+    _async_notify_sync_failure,
+)
 from custom_components.wyze_garmin_sync.sensor import WyzeProfileWeighInSensor
 
 
@@ -219,3 +223,33 @@ class TestManualSyncButton(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("diagnostic detail", str(raised.exception))
         self.assertIn("Manual Wyze/Garmin synchronization failed", captured.output[0])
+
+
+class TestSyncFailureNotification(unittest.TestCase):
+    @patch(
+        "custom_components.wyze_garmin_sync.coordinator.persistent_notification.async_create"
+    )
+    def test_creates_deduplicated_notification(
+        self,
+        async_create,
+    ) -> None:
+        hass = object()
+
+        _async_notify_sync_failure(hass, "entry-a_failure", "Wyze sync failed")
+
+        async_create.assert_called_once_with(
+            hass,
+            "Wyze sync failed",
+            title="Wyze Garmin Sync failed",
+            notification_id="entry-a_failure",
+        )
+
+    @patch(
+        "custom_components.wyze_garmin_sync.coordinator.persistent_notification.async_dismiss"
+    )
+    def test_dismisses_notification_after_recovery(self, async_dismiss) -> None:
+        hass = object()
+
+        _async_clear_sync_failure(hass, "entry-a_failure")
+
+        async_dismiss.assert_called_once_with(hass, "entry-a_failure")

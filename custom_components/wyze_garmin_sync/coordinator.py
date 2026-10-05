@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
@@ -24,6 +25,26 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_WYZE_API_KEY_URL = "https://developer-api-console.wyze.com/#/apikey/view"
+
+
+def _async_notify_sync_failure(
+    hass: HomeAssistant,
+    notification_id: str,
+    message: str,
+) -> None:
+    """Create or update one persistent notification for an integration failure."""
+    persistent_notification.async_create(
+        hass,
+        message,
+        title="Wyze Garmin Sync failed",
+        notification_id=notification_id,
+    )
+
+
+def _async_clear_sync_failure(hass: HomeAssistant, notification_id: str) -> None:
+    """Dismiss the integration failure notification after a successful sync."""
+    persistent_notification.async_dismiss(hass, notification_id)
 
 
 class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -41,6 +62,7 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             config_entry=entry,
         )
         self.entry = entry
+        self._notification_id = f"{DOMAIN}_{entry.entry_id}_sync_failure"
         self.token_root = hass.config.path(".storage", DOMAIN)
         self._upload_store = Store(
             hass,
@@ -84,6 +106,16 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 f"{type(err).__name__}: {err}"
             )
             _LOGGER.exception("Unable to refresh Wyze scale data")
+            _async_notify_sync_failure(
+                self.hass,
+                self._notification_id,
+                "Unable to retrieve the latest Wyze readings. "
+                f"Error: {type(err).__name__}: {err}\n\n"
+                "Check the integration logs and confirm your Wyze credentials "
+                "and API key are current. Wyze API keys expire after one year; "
+                f"manage or renew the key at {_WYZE_API_KEY_URL}, then use "
+                "the integration's Reconfigure option.",
+            )
             raise UpdateFailed("Unable to retrieve the latest Wyze readings") from err
         self._last_refresh_error = None
 
@@ -93,6 +125,7 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 profiles[profile_id] = {**cached, "_record": None}
 
         sync_errors: dict[str, str] = {}
+        uploaded_count = 0
         accounts = self.entry.options.get(CONF_GARMIN_ACCOUNTS, {})
         for profile_id, measurement in profiles.items():
             if not measurement["measurement_id"]:
@@ -127,6 +160,7 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 continue
             self._uploaded[profile_id] = measurement["measurement_id"]
             await self._upload_store.async_save(self._uploaded)
+            uploaded_count += 1
 
         public_profiles = {
             profile_id: {
@@ -138,6 +172,27 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         }
         self._cached_profiles = public_profiles
         await self._profile_store.async_save(public_profiles)
+        _LOGGER.info(
+            "Wyze Garmin sync completed: %d profile readings available, "
+            "%d new Garmin uploads, %d profile errors",
+            sum(bool(profile["measurement_id"]) for profile in public_profiles.values()),
+            uploaded_count,
+            len(sync_errors),
+        )
+        if sync_errors:
+            errors = "\n".join(
+                f"- Wyze profile {profile_id}: {error}"
+                for profile_id, error in sync_errors.items()
+            )
+            _async_notify_sync_failure(
+                self.hass,
+                self._notification_id,
+                "One or more Garmin uploads failed:\n"
+                f"{errors}\n\n"
+                "Check the integration logs and the Garmin account mapping.",
+            )
+        else:
+            _async_clear_sync_failure(self.hass, self._notification_id)
         return {"profiles": public_profiles, "sync_errors": sync_errors}
 
     @staticmethod

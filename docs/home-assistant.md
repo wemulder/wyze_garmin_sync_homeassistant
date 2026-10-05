@@ -66,6 +66,24 @@ refresh runs during setup. If you want syncs more frequently, create a Home
 Assistant automation that calls the integration's **Sync now** button at your
 preferred times.
 
+## Wyze API key or token expires
+
+Wyze access tokens are refreshed automatically when possible. If Wyze rejects
+the refresh token, or you replace/revoke the Wyze API key or key ID, create or
+retrieve the current API key and key ID from Wyze, then open the integration's
+menu and choose **Reconfigure**. Enter the current Wyze email, password, API
+key ID, and API key. The integration verifies the credentials and obtains a
+fresh token before saving the updated configuration and reloading.
+
+If authentication fails, the existing integration configuration remains in
+place; check the credentials and API key in Wyze before retrying.
+
+Wyze API keys are valid for one year. Review or renew them at the
+[Wyze Developer API Console](https://developer-api-console.wyze.com/#/apikey/view)
+before expiry. If a sync fails because a key expired, Home Assistant creates
+or updates a persistent notification with a reminder and recovery instructions.
+The notification is dismissed after a successful sync.
+
 ## Credentials and tokens
 
 Credentials are stored in the Home Assistant config entry. Cached Wyze and
