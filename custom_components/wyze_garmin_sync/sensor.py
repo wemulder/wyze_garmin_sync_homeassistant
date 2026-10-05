@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DEFAULT_MANUFACTURER, DOMAIN
+from .const import CONF_GARMIN_ACCOUNTS, DEFAULT_MANUFACTURER, DOMAIN
 from .coordinator import WyzeGarminCoordinator
 
 
@@ -147,6 +147,8 @@ class WyzeProfileSensor(SensorEntity):
             "profile_id": self.profile_id,
             "measurement_id": profile.get("measurement_id"),
             "last_measurement": profile.get("timestamp"),
+            "garmin_account_configured": self.profile_id
+            in self.coordinator.entry.options.get(CONF_GARMIN_ACCOUNTS, {}),
         }
         sync_error = self.coordinator.data.get("sync_errors", {}).get(self.profile_id)
         if sync_error:

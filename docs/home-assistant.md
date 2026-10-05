@@ -18,10 +18,31 @@ through the original standalone script when run manually.
    **Wyze Garmin Sync**.
 4. Enter the Wyze email, password, API key ID, and API key.
 5. After the first refresh discovers the scale profiles, open the integration's
-   options. Set the sync interval in hours and select a Wyze profile to enter
-   its Garmin account credentials. Repeat the options step for each profile.
+   options. Set the daily sync time and select a Wyze profile to enter its
+   Garmin account credentials. Repeat the options step for each profile.
 6. If Garmin requests MFA while adding an account, enter the current MFA code.
    The code is used for that login and is not stored.
+
+## Identify which Wyze profile is yours
+
+Before assigning Garmin accounts, use Home Assistant's per-profile **Weight**
+sensors to match Wyze profiles to people:
+
+1. Go to **Settings → Devices & services → Wyze Garmin Sync** and open the
+   integration's devices/entities. Each profile device has its Wyze name (or
+   profile ID) and a **Weight** sensor. The sensor's `profile_id` attribute
+   gives the exact profile ID used by the Garmin-account selector.
+2. Compare the latest weight shown for each profile with a recent reading you
+   can identify in the Wyze app or already know for that person.
+3. If the existing readings are ambiguous, leave Garmin accounts unassigned,
+   have one person take a new measurement, then press **Sync now** and refresh
+   the entity view. The profile whose measurement time and weight changed is
+   that person. Repeat with the other household member.
+4. In integration options, select the matching profile and add that person's
+   Garmin account.
+
+Do the profile matching before linking Garmin accounts so a test measurement
+cannot be sent to the wrong Garmin account.
 
 The Wyze account is shared across profiles. Garmin credentials are mapped by
 the Wyze profile identifier, and each profile gets its own token directory.
@@ -33,11 +54,15 @@ unambiguous.
 Each discovered profile has sensors for weight, body fat, body water, bone
 mass, muscle mass, basal metabolic rate, metabolic age, visceral fat rating,
 BMI, and physique rating. The integration also provides a **Sync now** button.
-Pressing it requests an immediate refresh for all configured profiles; repeated
-readings are not uploaded again.
+Pressing it requests an immediate refresh for all profiles; repeated readings
+are not uploaded again. It can also be used while identifying profiles before
+Garmin accounts are assigned.
 
-Scheduled synchronization defaults to every 24 hours. Change the interval in
-the integration options. The first refresh runs during setup.
+Scheduled synchronization runs once daily at the time selected in the
+integration options (default **07:00 Home Assistant local time**). The first
+refresh runs during setup. If you want syncs more frequently, create a Home
+Assistant automation that calls the integration's **Sync now** button at your
+preferred times.
 
 ## Credentials and tokens
 

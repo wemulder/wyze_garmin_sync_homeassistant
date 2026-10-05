@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
 from typing import Any
 
@@ -34,13 +33,11 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self,
         hass: HomeAssistant,
         entry: ConfigEntry,
-        update_interval: timedelta,
     ) -> None:
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=update_interval,
             config_entry=entry,
         )
         self.entry = entry
@@ -96,9 +93,6 @@ class WyzeGarminCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 continue
             account = accounts.get(profile_id)
             if not account:
-                sync_errors[profile_id] = (
-                    "No Garmin account configured for this Wyze profile."
-                )
                 continue
             if self._uploaded.get(profile_id) == measurement["measurement_id"]:
                 continue

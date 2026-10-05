@@ -23,9 +23,9 @@
     "step": {
       "init": {
         "title": "Sync and Garmin accounts",
-        "description": "Choose a sync interval. Discovered profiles: {profiles}. Enter Garmin credentials in the fields for each profile. If Garmin requests MFA, enter the current code; it is not saved.",
+        "description": "Choose the daily sync time. Discovered profiles: {profiles}. Enter Garmin credentials for each profile. If Garmin requests MFA, enter the current code; it is not saved.",
         "data": {
-          "interval_hours": "Sync interval (hours)",
+          "sync_time": "Daily sync time",
           "profile_id": "Wyze profile",
           "garmin_email": "Garmin email",
           "garmin_password": "Garmin password",

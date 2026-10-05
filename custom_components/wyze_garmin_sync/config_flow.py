@@ -12,12 +12,12 @@ from homeassistant.helpers import selector
 from . import api
 from .const import (
     CONF_GARMIN_ACCOUNTS,
-    CONF_INTERVAL_HOURS,
+    CONF_SYNC_TIME,
     CONF_WYZE_API_KEY,
     CONF_WYZE_EMAIL,
     CONF_WYZE_KEY_ID,
     CONF_WYZE_PASSWORD,
-    DEFAULT_INTERVAL_HOURS,
+    DEFAULT_SYNC_TIME,
     DOMAIN,
 )
 
@@ -79,7 +79,7 @@ class WyzeGarminConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class WyzeGarminOptionsFlow(config_entries.OptionsFlow):
-    """Configure the sync interval and Garmin accounts for discovered profiles."""
+    """Configure the daily sync time and Garmin mappings for Wyze profiles."""
 
     async def async_step_init(
         self, user_input: dict | None = None
@@ -93,7 +93,7 @@ class WyzeGarminOptionsFlow(config_entries.OptionsFlow):
         profiles = coordinator.data.get("profiles", {}) if coordinator and coordinator.data else {}
 
         if user_input is not None:
-            interval = user_input[CONF_INTERVAL_HOURS]
+            sync_time = user_input[CONF_SYNC_TIME]
             token_root = self.hass.config.path(".storage", DOMAIN)
             profile_id = user_input.get("profile_id")
             email = user_input.get("garmin_email", "").strip()
@@ -127,23 +127,16 @@ class WyzeGarminOptionsFlow(config_entries.OptionsFlow):
                 return self.async_create_entry(
                     title="",
                     data={
-                        CONF_INTERVAL_HOURS: interval,
+                        CONF_SYNC_TIME: sync_time,
                         CONF_GARMIN_ACCOUNTS: accounts,
                     },
                 )
 
         fields = {
             vol.Required(
-                CONF_INTERVAL_HOURS,
-                default=data.get(CONF_INTERVAL_HOURS, DEFAULT_INTERVAL_HOURS),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=1,
-                    max=8760,
-                    step=1,
-                    mode=selector.NumberSelectorMode.BOX,
-                )
-            )
+                CONF_SYNC_TIME,
+                default=data.get(CONF_SYNC_TIME, DEFAULT_SYNC_TIME),
+            ): selector.TimeSelector()
         }
         if profiles:
             fields[vol.Optional("profile_id")] = selector.SelectSelector(

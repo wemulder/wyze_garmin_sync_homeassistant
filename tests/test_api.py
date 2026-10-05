@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import unittest
 import json
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -13,6 +13,7 @@ from custom_components.wyze_garmin_sync.api import (
     authenticate_wyze,
     latest_measurements,
 )
+from custom_components.wyze_garmin_sync.const import parse_sync_time
 
 
 class FakeRecord:
@@ -162,3 +163,9 @@ class TestWyzeAuthentication(unittest.TestCase):
             key_id="key-id",
             api_key="api-key",
         )
+
+
+class TestDailySyncTime(unittest.TestCase):
+    def test_parses_home_assistant_time_selector_values(self) -> None:
+        self.assertEqual(parse_sync_time("07:00:00").isoformat(), "07:00:00")
+        self.assertEqual(parse_sync_time("23:45:00").isoformat(), "23:45:00")
