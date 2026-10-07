@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.core import HomeAssistant
 
-from .const import CONF_SYNC_TIME, DEFAULT_SYNC_TIME, DOMAIN, parse_sync_time
+from .const import (
+    CONF_POLL_INTERVAL_MINUTES,
+    DEFAULT_POLL_INTERVAL_MINUTES,
+    DISABLE_POLLING,
+    DOMAIN,
+)
 from .coordinator import WyzeGarminCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON]
@@ -23,29 +27,24 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Wyze Garmin Sync from a config entry."""
-    sync_time = parse_sync_time(
-        entry.options.get(CONF_SYNC_TIME, DEFAULT_SYNC_TIME)
+    poll_interval = entry.options.get(
+        CONF_POLL_INTERVAL_MINUTES,
+        DEFAULT_POLL_INTERVAL_MINUTES,
     )
-    coordinator = WyzeGarminCoordinator(hass, entry)
+    coordinator = WyzeGarminCoordinator(
+        hass,
+        entry,
+        update_interval=(
+            None
+            if poll_interval == DISABLE_POLLING
+            else timedelta(minutes=poll_interval)
+        ),
+    )
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
-
-    @callback
-    async def _async_daily_sync(_now: datetime) -> None:
-        await coordinator.async_refresh()
-
-    entry.async_on_unload(
-        async_track_time_change(
-            hass,
-            _async_daily_sync,
-            hour=sync_time.hour,
-            minute=sync_time.minute,
-            second=sync_time.second,
-        )
-    )
     return True
 
 

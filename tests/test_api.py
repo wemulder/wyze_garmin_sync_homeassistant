@@ -4,19 +4,25 @@ from __future__ import annotations
 
 import json
 import unittest
+from datetime import timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.exceptions import HomeAssistantError
 
+from custom_components.wyze_garmin_sync import async_setup_entry
 from custom_components.wyze_garmin_sync.api import (
     authenticate_wyze,
     latest_measurements,
 )
 from custom_components.wyze_garmin_sync.button import WyzeGarminSyncButton
-from custom_components.wyze_garmin_sync.const import parse_sync_time
+from custom_components.wyze_garmin_sync.const import (
+    CONF_POLL_INTERVAL_MINUTES,
+    DEFAULT_POLL_INTERVAL_MINUTES,
+    DISABLE_POLLING,
+)
 from custom_components.wyze_garmin_sync.coordinator import (
     _async_clear_sync_failure,
     _async_notify_sync_failure,
@@ -173,12 +179,6 @@ class TestWyzeAuthentication(unittest.TestCase):
         )
 
 
-class TestDailySyncTime(unittest.TestCase):
-    def test_parses_home_assistant_time_selector_values(self) -> None:
-        self.assertEqual(parse_sync_time("07:00:00").isoformat(), "07:00:00")
-        self.assertEqual(parse_sync_time("23:45:00").isoformat(), "23:45:00")
-
-
 class TestWeighInTimestampSensor(unittest.TestCase):
     def test_sensor_state_is_the_measurement_time(self) -> None:
         coordinator = SimpleNamespace(
@@ -253,3 +253,61 @@ class TestSyncFailureNotification(unittest.TestCase):
         _async_clear_sync_failure(hass, "entry-a_failure")
 
         async_dismiss.assert_called_once_with(hass, "entry-a_failure")
+
+
+class TestPollInterval(unittest.IsolatedAsyncioTestCase):
+    async def test_setup_uses_default_poll_interval(self) -> None:
+        await self._assert_setup_interval(
+            {},
+            DEFAULT_POLL_INTERVAL_MINUTES,
+        )
+
+    async def test_setup_uses_configured_poll_interval(self) -> None:
+        await self._assert_setup_interval(
+            {CONF_POLL_INTERVAL_MINUTES: 1440},
+            1440,
+        )
+
+    async def test_setup_disables_recurring_polling_when_set_to_zero(self) -> None:
+        await self._assert_setup_interval(
+            {CONF_POLL_INTERVAL_MINUTES: DISABLE_POLLING},
+            None,
+        )
+
+    async def _assert_setup_interval(
+        self,
+        options: dict[str, int],
+        expected_minutes: int | None,
+    ) -> None:
+        coordinator = SimpleNamespace(
+            async_config_entry_first_refresh=AsyncMock()
+        )
+        hass = SimpleNamespace(
+            data={},
+            config_entries=SimpleNamespace(
+                async_forward_entry_setups=AsyncMock()
+            ),
+        )
+        entry = SimpleNamespace(
+            options=options,
+            entry_id="entry-a",
+            async_on_unload=Mock(),
+            add_update_listener=Mock(),
+        )
+
+        with patch(
+            "custom_components.wyze_garmin_sync.WyzeGarminCoordinator",
+            return_value=coordinator,
+        ) as coordinator_class:
+            await async_setup_entry(hass, entry)
+
+        coordinator_class.assert_called_once_with(
+            hass,
+            entry,
+            update_interval=(
+                None
+                if expected_minutes is None
+                else timedelta(minutes=expected_minutes)
+            ),
+        )
+        coordinator.async_config_entry_first_refresh.assert_awaited_once()

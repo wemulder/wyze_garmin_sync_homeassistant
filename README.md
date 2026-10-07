@@ -29,8 +29,10 @@ The application retrieves the latest measurement from your Wyze account and uplo
 ## Home Assistant / HACS
 
 This fork also includes a Home Assistant custom integration with per-profile
-sensor entities, separate Garmin mappings, a configurable daily sync time, and a
-manual sync button. See [Home Assistant / HACS setup](./docs/home-assistant.md).
+sensor entities, separate Garmin mappings, a configurable 10–1440 minute poll
+interval (15 minutes by default, with a manual-only option), and a manual sync
+button. See
+[Home Assistant / HACS setup](./docs/home-assistant.md).
 The integration syncs latest readings only; historical backfill remains a
 manual standalone-script operation.
 

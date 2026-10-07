@@ -18,8 +18,8 @@ through the original standalone script when run manually.
    **Wyze Garmin Sync**.
 4. Enter the Wyze email, password, API key ID, and API key.
 5. After the first refresh discovers the scale profiles, open the integration's
-   options. Set the daily sync time and select a Wyze profile to enter its
-   Garmin account credentials. Repeat the options step for each profile.
+   options, set the poll interval in minutes, and select a Wyze profile to enter
+   its Garmin account credentials. Repeat the options step for each profile.
 6. If Garmin requests MFA while adding an account, enter the current MFA code.
    The code is used for that login and is not stored.
 
@@ -60,11 +60,29 @@ button. Pressing it requests an immediate refresh for all profiles; repeated
 readings are not uploaded again. It can also be used while identifying profiles
 before Garmin accounts are assigned.
 
-Scheduled synchronization runs once daily at the time selected in the
-integration options (default **07:00 Home Assistant local time**). The first
-refresh runs during setup. If you want syncs more frequently, create a Home
-Assistant automation that calls the integration's **Sync now** button at your
-preferred times.
+The integration checks Wyze every **15 minutes** by default. In the integration
+options, users can set the poll interval to any whole number from **10 to 1440
+minutes** (10 minutes to 24 hours), or set it to **0** to disable recurring
+polling. After the integration's initial setup refresh, sync manually with the
+**Sync now** button, or create an automation to trigger syncs on your own
+schedule:
+
+```yaml
+alias: Sync Wyze scale to Garmin daily
+triggers:
+  - trigger: time
+    at: "07:00:00"
+actions:
+  - action: button.press
+    target:
+      entity_id: button.wyze_garmin_sync_sync_now
+mode: single
+```
+
+Replace `button.wyze_garmin_sync_sync_now` with the actual **Sync now** button
+entity ID shown in **Settings → Devices & services → Wyze Garmin Sync**. With
+polling disabled, you can press the button any time or use an automation to
+trigger syncs on your own schedule.
 
 ## Wyze API key or token expires
 

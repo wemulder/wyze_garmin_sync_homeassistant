@@ -12,13 +12,15 @@ from homeassistant.helpers import selector
 from . import api
 from .const import (
     CONF_GARMIN_ACCOUNTS,
-    CONF_SYNC_TIME,
+    CONF_POLL_INTERVAL_MINUTES,
     CONF_WYZE_API_KEY,
     CONF_WYZE_EMAIL,
     CONF_WYZE_KEY_ID,
     CONF_WYZE_PASSWORD,
-    DEFAULT_SYNC_TIME,
+    DEFAULT_POLL_INTERVAL_MINUTES,
     DOMAIN,
+    MAX_POLL_INTERVAL_MINUTES,
+    MIN_POLL_INTERVAL_MINUTES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -132,12 +134,12 @@ class WyzeGarminConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class WyzeGarminOptionsFlow(config_entries.OptionsFlow):
-    """Configure the daily sync time and Garmin mappings for Wyze profiles."""
+    """Configure Garmin account mappings for Wyze profiles."""
 
     async def async_step_init(
         self, user_input: dict | None = None
     ) -> FlowResult:
-        """Configure Garmin credentials for each currently discovered profile."""
+        """Configure Garmin credentials for a discovered profile."""
         errors: dict[str, str] = {}
         entry = self.config_entry
         data = entry.options
@@ -146,8 +148,8 @@ class WyzeGarminOptionsFlow(config_entries.OptionsFlow):
         profiles = coordinator.data.get("profiles", {}) if coordinator and coordinator.data else {}
 
         if user_input is not None:
-            sync_time = user_input[CONF_SYNC_TIME]
             token_root = self.hass.config.path(".storage", DOMAIN)
+            poll_interval = int(user_input[CONF_POLL_INTERVAL_MINUTES])
             profile_id = user_input.get("profile_id")
             email = user_input.get("garmin_email", "").strip()
             password = user_input.get("garmin_password", "")
@@ -180,16 +182,30 @@ class WyzeGarminOptionsFlow(config_entries.OptionsFlow):
                 return self.async_create_entry(
                     title="",
                     data={
-                        CONF_SYNC_TIME: sync_time,
                         CONF_GARMIN_ACCOUNTS: accounts,
+                        CONF_POLL_INTERVAL_MINUTES: poll_interval,
                     },
                 )
 
         fields = {
             vol.Required(
-                CONF_SYNC_TIME,
-                default=data.get(CONF_SYNC_TIME, DEFAULT_SYNC_TIME),
-            ): selector.TimeSelector()
+                CONF_POLL_INTERVAL_MINUTES,
+                default=data.get(
+                    CONF_POLL_INTERVAL_MINUTES,
+                    DEFAULT_POLL_INTERVAL_MINUTES,
+                ),
+            ): vol.All(
+                selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=MAX_POLL_INTERVAL_MINUTES,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                        unit_of_measurement="min",
+                    )
+                ),
+                vol.Any(0, vol.Range(min=MIN_POLL_INTERVAL_MINUTES)),
+            )
         }
         if profiles:
             fields[vol.Optional("profile_id")] = selector.SelectSelector(

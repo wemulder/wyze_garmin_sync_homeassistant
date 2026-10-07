@@ -33,9 +33,9 @@
     "step": {
       "init": {
         "title": "Sync and Garmin accounts",
-        "description": "Choose the daily sync time. Discovered profiles: {profiles}. Enter Garmin credentials for each profile. If Garmin requests MFA, enter the current code; it is not saved.",
+        "description": "Choose how often to check Wyze for new measurements, or set the interval to 0 for manual-only syncing. Discovered profiles: {profiles}. Select a profile to configure its Garmin account. If Garmin requests MFA, enter the current code; it is not saved.",
         "data": {
-          "sync_time": "Daily sync time",
+          "poll_interval_minutes": "Poll interval in minutes (0 for manual only; otherwise 10-1440)",
           "profile_id": "Wyze profile",
           "garmin_email": "Garmin email",
           "garmin_password": "Garmin password",
