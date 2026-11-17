@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/custom_components/wyze_garmin_sync/manifest\\.json$/"
+      ],
+      "matchStrings": [
+        "\"(?<depName>wyze-sdk|garminconnect)==(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "pypi",
+      "versioningTemplate": "pep440"
+    }
+  ]
+}
